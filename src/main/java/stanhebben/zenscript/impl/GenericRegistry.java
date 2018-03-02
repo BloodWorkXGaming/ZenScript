@@ -14,6 +14,7 @@ import java.lang.reflect.Field;
 import java.util.*;
 import java.util.function.ToIntFunction;
 import java.util.logging.*;
+import java.util.regex.Matcher;
 
 public class GenericRegistry implements IZenRegistry {
     
@@ -103,7 +104,17 @@ public class GenericRegistry implements IZenRegistry {
     }
     
     public IZenSymbol resolveBracket(IEnvironmentGlobal environment, List<Token> tokens) {
+        int tokensSize = tokens.size();
+        if (tokensSize <= 0) return null;
+        
+        String s = tokens.get(0).getValue();
+        for(int i = 1; i < tokensSize; i++) {
+            s = s.concat(tokens.get(i).getValue());
+        }
+        
         for(Pair<Integer, IBracketHandler> pair : bracketHandlers) {
+            if (!pair.getValue().getRegexPattern().matcher(s).matches()) continue;
+            
             IZenSymbol symbol = pair.getValue().resolve(environment, tokens);
             if(symbol != null) {
                 return symbol;

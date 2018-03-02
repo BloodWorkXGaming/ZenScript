@@ -5,6 +5,7 @@ import stanhebben.zenscript.parser.Token;
 import stanhebben.zenscript.symbols.IZenSymbol;
 
 import java.util.List;
+import java.util.regex.Pattern;
 
 /**
  * Bracket handlers enable processing of the bracket syntax.
@@ -19,7 +20,7 @@ import java.util.List;
  *
  * @author Stan Hebben
  */
-public interface IBracketHandler {
+public interface IBracketHandler<T> {
     
     /**
      * Resolves a set of tokens.
@@ -32,4 +33,12 @@ public interface IBracketHandler {
      * @return the resolved symbol, or null
      */
     IZenSymbol resolve(IEnvironmentGlobal environment, List<Token> tokens);
+    
+    Pattern getRegexPattern();
+    
+    Class<T> getReferenceClass();
+    
+    T resolve(List<String> strings);
+    
+    int getPriority();
 }

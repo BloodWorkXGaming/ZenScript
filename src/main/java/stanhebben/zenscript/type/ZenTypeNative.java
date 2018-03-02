@@ -65,7 +65,7 @@ public class ZenTypeNative extends ZenType {
     public void complete(ITypeRegistry types) {
         int iterator = ITERATOR_NONE;
         Annotation _iteratorAnnotation = null;
-        String _classPkg = cls.getPackage().getName().replace('/', '.');
+        String _classPkg = (cls.getPackage() != null) ? cls.getPackage().getName().replace('/', '.') : "";
         String _className = cls.getSimpleName();
         boolean fully = false;
         

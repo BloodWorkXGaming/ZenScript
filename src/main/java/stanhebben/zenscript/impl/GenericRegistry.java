@@ -7,21 +7,18 @@ import stanhebben.zenscript.parser.Token;
 import stanhebben.zenscript.symbols.*;
 import stanhebben.zenscript.type.ZenTypeNative;
 import stanhebben.zenscript.type.natives.*;
-import stanhebben.zenscript.util.Pair;
 
 import java.lang.annotation.Annotation;
-import java.lang.reflect.Field;
+import java.lang.reflect.*;
 import java.util.*;
 import java.util.function.ToIntFunction;
-import java.util.logging.*;
-import java.util.regex.Matcher;
 
 public class GenericRegistry implements IZenRegistry {
     
     private IZenCompileEnvironment compileEnvironment;
     
     private Map<String, IZenSymbol> globals = new HashMap<>();
-    private Set<Pair<Integer, IBracketHandler>> bracketHandlers = new TreeSet<>(Comparator.comparingInt((ToIntFunction<Pair<Integer, IBracketHandler>>) Pair::getKey).thenComparing(o -> o.getValue().getClass().getName()));
+    private Set<IBracketHandler> bracketHandlers = new TreeSet<>(Comparator.comparingInt((ToIntFunction<IBracketHandler>) IBracketHandler::getPriority).thenComparing(o -> o.getClass().getName()));
     private TypeRegistry types = new TypeRegistry();
     private SymbolPackage root = new SymbolPackage("<root>");
     private Map<String, TypeExpansion> expansions = new HashMap<>();
@@ -59,23 +56,17 @@ public class GenericRegistry implements IZenRegistry {
     }
     
     public void registerBracketHandler(IBracketHandler handler) {
-        int prio = 10;
-        if(handler.getClass().getAnnotation(BracketHandler.class) != null) {
-            prio = handler.getClass().getAnnotation(BracketHandler.class).priority();
-        } else {
-            getLogger().info(handler.getClass().getName() + " is missing a BracketHandler annotation, setting the priority to " + prio);
-        }
-        bracketHandlers.add(new Pair<>(prio, handler));
+        bracketHandlers.add(handler);
     }
     
     public void removeBracketHandler(IBracketHandler handler) {
-        Pair<Integer, IBracketHandler> prioPair = null;
-        for(Pair<Integer, IBracketHandler> pair : bracketHandlers) {
-            if(pair.getValue().equals(handler)) {
-                prioPair = pair;
+        IBracketHandler toRemove = null;
+        for(IBracketHandler bracket : bracketHandlers) {
+            if(bracket.equals(handler)) {
+                toRemove = bracket;
             }
         }
-        bracketHandlers.remove(prioPair);
+        bracketHandlers.remove(toRemove);
     }
     
     public void registerNativeClass(Class<?> cls) {
@@ -85,6 +76,25 @@ public class GenericRegistry implements IZenRegistry {
             root.put(type.getName(), new SymbolType(type), errorLogger);
         } catch(Throwable ex) {
             ex.printStackTrace();
+        }
+    }
+    
+    public void registerAdapter(Class clazz, String pack, Method... methods){
+        if (pack.isEmpty()) {
+            pack = "<root>";
+        }
+        
+        ZenTypeNative type = new ZenTypeNative(clazz);
+        type.complete(types);
+        getRoot().put(pack + clazz.getSimpleName(), new SymbolType(type), errorLogger);
+        
+        for(Method method : methods) {
+            if(Modifier.isPublic(method.getModifiers())) {
+                ZenNativeMember member = new ZenNativeMember();
+                member.addMethod(new JavaMethod(method, types));
+                
+                type.getStaticMembers().put(method.getName(), member);
+            }
         }
     }
     
@@ -112,10 +122,10 @@ public class GenericRegistry implements IZenRegistry {
             s = s.concat(tokens.get(i).getValue());
         }
         
-        for(Pair<Integer, IBracketHandler> pair : bracketHandlers) {
-            if (!pair.getValue().getRegexPattern().matcher(s).matches()) continue;
+        for(IBracketHandler bracketHandler : bracketHandlers) {
+            if (!bracketHandler.getRegexPattern().matcher(s).matches()) continue;
             
-            IZenSymbol symbol = pair.getValue().resolve(environment, tokens);
+            IZenSymbol symbol = bracketHandler.resolve(environment, tokens);
             if(symbol != null) {
                 return symbol;
             }
@@ -136,7 +146,7 @@ public class GenericRegistry implements IZenRegistry {
         return globals;
     }
     
-    public Set<Pair<Integer, IBracketHandler>> getBracketHandlers() {
+    public Set<IBracketHandler> getBracketHandlers() {
         return bracketHandlers;
     }
     
@@ -160,7 +170,7 @@ public class GenericRegistry implements IZenRegistry {
         this.globals = globals;
     }
     
-    public void setBracketHandlers(Set<Pair<Integer, IBracketHandler>> bracketHandlers) {
+    public void setBracketHandlers(Set<IBracketHandler> bracketHandlers) {
         this.bracketHandlers = bracketHandlers;
     }
     

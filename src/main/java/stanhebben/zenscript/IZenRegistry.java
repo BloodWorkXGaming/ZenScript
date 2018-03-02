@@ -22,7 +22,7 @@ public interface IZenRegistry {
     
     Map<String, IZenSymbol> getGlobals();
     
-    Set<Pair<Integer, IBracketHandler>> getBracketHandlers();
+    Set<IBracketHandler> getBracketHandlers();
     
     TypeRegistry getTypes();
     
@@ -34,7 +34,7 @@ public interface IZenRegistry {
     
     void setGlobals(Map<String, IZenSymbol> globals);
     
-    void setBracketHandlers(Set<Pair<Integer, IBracketHandler>> bracketHandlers);
+    void setBracketHandlers(Set<IBracketHandler> bracketHandlers);
     
     void setTypes(TypeRegistry types);
     
